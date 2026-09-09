@@ -60,11 +60,15 @@
     .hero-deck { max-width: 770px; margin: 30px 0 0; font-size: clamp(1.08rem, 2vw, 1.35rem); color: var(--muted); }
     .hero-note { display: inline-flex; gap: 10px; align-items: center; margin-top: 28px; padding: .55rem .8rem; border: 1px solid var(--line); color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .72rem; background: rgba(255,255,255,.74); text-transform: uppercase; letter-spacing: .04em; }
     .hero-note::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
-    .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin-top: 56px; }
-    .stat { padding: 28px 24px 28px 0; }
-    .stat + .stat { border-left: 1px solid var(--line); padding-left: 28px; }
-    .stat strong { display: block; font-family: Georgia, serif; font-size: clamp(2.8rem, 5vw, 5rem); font-weight: 500; line-height: 1; color: var(--signal-blue); }
-    .stat span { display: block; margin-top: 9px; color: var(--muted); font-size: .9rem; }
+    .stats { position: relative; z-index: 3; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin-top: 56px; background: linear-gradient(90deg, rgba(255,255,255,.82), rgba(255,255,255,.52)); backdrop-filter: blur(10px); }
+    .stat { appearance: none; position: relative; min-height: 170px; padding: 22px 22px 24px 0; border: 0; background: transparent; text-align: left; color: inherit; cursor: pointer; overflow: hidden; }
+    .stat + .stat { border-left: 1px solid var(--line); padding-left: 24px; }
+    .stat::after { content: ""; position: absolute; inset: auto 18px 16px 0; height: 3px; transform: scaleX(.22); transform-origin: left; background: var(--accent, var(--signal-blue)); opacity: .62; transition: transform .28s ease, opacity .28s ease; }
+    .stat:hover::after, .stat:focus-visible::after, .stat.is-active::after { transform: scaleX(1); opacity: 1; }
+    .stat-kicker { display: block; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .62rem; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
+    .stat strong { display: block; margin-top: 12px; font-family: Georgia, serif; font-size: clamp(2.5rem, 4.8vw, 5rem); font-weight: 500; line-height: .92; color: var(--accent, var(--signal-blue)); font-variant-numeric: lining-nums tabular-nums; }
+    .stat span { display: block; margin-top: 10px; color: var(--muted); font-size: .86rem; line-height: 1.45; }
+    .stat b { display: block; margin-top: 8px; color: var(--ink); font-size: .78rem; font-weight: 750; }
     section { scroll-margin-top: 85px; }
     .section { width: min(var(--content), calc(100% - 32px)); margin: 0 auto; padding: 90px 0; }
     .section-head { display: grid; grid-template-columns: minmax(0, .85fr) minmax(280px, 1.15fr); gap: 50px; align-items: end; margin-bottom: 38px; }
@@ -170,6 +174,7 @@
       .hero { padding-top: 62px; }
       .blueprint-field { inset: 16px -35vw 0 35%; opacity: .65; }
       .stats { grid-template-columns: 1fr; }
+      .stat { min-height: 140px; }
       .stat + .stat { border-left: 0; border-top: 1px solid var(--line); padding-left: 0; }
       .section { padding: 68px 0; }
       .section-head { gap: 20px; }
@@ -256,9 +261,30 @@
         <div class="hero-note">Public evidence · reproducible metrics · interpretation limits included</div>
       </div>
       <div class="stats" aria-label="Headline dataset figures">
-        <div class="stat"><strong>291</strong><span>included sessions and substantive content items</span></div>
-        <div class="stat"><strong>238</strong><span>unique published speaker display names</span></div>
-        <div class="stat"><strong>49</strong><span>unique raw sponsor display names across 101 sponsor-year records</span></div>
+        <button class="stat is-active" type="button" data-signal="years" style="--accent:#245cf2">
+          <small class="stat-kicker">Time span</small>
+          <strong data-count-to="10">10</strong>
+          <span>held event years from 2015 to 2025</span>
+          <b>2015 → 2025, with 2020 absent</b>
+        </button>
+        <button class="stat" type="button" data-signal="records" style="--accent:#169b91">
+          <small class="stat-kicker">Evidence base</small>
+          <strong data-count-to="291">291</strong>
+          <span>public agenda records in the analytical subset</span>
+          <b>every visible claim links back to sources</b>
+        </button>
+        <button class="stat" type="button" data-signal="people" style="--accent:#8b69c6">
+          <small class="stat-kicker">Community voice</small>
+          <strong data-count-to="238">238</strong>
+          <span>published speaker display names across the decade</span>
+          <b>breadth matters more than ranking</b>
+        </button>
+        <button class="stat" type="button" data-signal="signal" style="--accent:#d59a27">
+          <small class="stat-kicker">Fastest rising signal</small>
+          <strong data-count-to="10" data-suffix=".0pp">+10.0pp</strong>
+          <span>Observability &amp; SRE recent-minus-early growth</span>
+          <b>a modern engineering maturity signal</b>
+        </button>
       </div>
     </section>
 
@@ -430,18 +456,35 @@
         const context = canvas.getContext("2d");
         if (!context) return;
         const reducedMotion = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        const labels = [...data.topic_trends]
-          .sort((a, b) => b.active_years - a.active_years || b.total_sessions - a.total_sessions)
-          .slice(0, 18)
-          .map((item) => item.topic);
+        let activeSignal = "years";
+        const storyLabels = [
+          ["2015", "Cloud platforms", "CSS & Web Platform", "Career, Learning & Communication"],
+          ["2017", "Software Design & Patterns", "Systems & Emerging Languages"],
+          ["2019", "Reliability, Scale & Performance", "Application & Cloud Security"],
+          ["2022", "Product Management & Discovery", "Diversity, Inclusion & Community"],
+          ["2024", "Generative AI & LLM", "Architecture & Distributed Systems"],
+          ["2025", "Observability & SRE", "Wellbeing & Sustainable Work", "UX, Product & Design"]
+        ].flat();
+        const signalHighlights = {
+          years: ["2015", "2017", "2019", "2022", "2024", "2025"],
+          records: ["Cloud platforms", "CSS & Web Platform", "Architecture & Distributed Systems", "Product Management & Discovery"],
+          people: ["Career, Learning & Communication", "Diversity, Inclusion & Community", "Wellbeing & Sustainable Work", "UX, Product & Design"],
+          signal: ["Observability & SRE", "Generative AI & LLM", "Reliability, Scale & Performance", "Application & Cloud Security"]
+        };
         let width = 0, height = 0, ratio = 1;
-        const points = labels.map((label, index) => ({
+        const points = storyLabels.map((label, index) => ({
           label,
-          x: .12 + ((index * 47) % 79) / 100,
-          y: .10 + ((index * 31 + 11) % 77) / 100,
+          x: .08 + (index / Math.max(storyLabels.length - 1, 1)) * .84,
+          y: .82 - (index / Math.max(storyLabels.length - 1, 1)) * .62 + Math.sin(index * 1.7) * .08,
           phase: index * .67,
-          radius: 2.2 + (index % 4) * .55
+          radius: /^\d{4}$/.test(label) ? 3.8 : 2.2 + (index % 4) * .45
         }));
+        const statButtons = Array.from(document.querySelectorAll(".stat[data-signal]"));
+
+        const setActiveSignal = (signal) => {
+          activeSignal = signal;
+          statButtons.forEach((button) => button.classList.toggle("is-active", button.dataset.signal === signal));
+        };
 
         const resize = () => {
           const bounds = canvas.getBoundingClientRect();
@@ -455,40 +498,71 @@
 
         const draw = (time = 0) => {
           context.clearRect(0, 0, width, height);
+          const intro = reducedMotion ? 1 : Math.min(1, time / 2600);
+          const breathe = reducedMotion ? 0 : Math.sin(time / 900) * .5 + .5;
+          const activeLabels = signalHighlights[activeSignal] || signalHighlights.years;
           const shifted = points.map((point) => ({
             ...point,
+            isActive: activeLabels.includes(point.label),
             px: point.x * width + Math.sin(time / 2300 + point.phase) * (reducedMotion ? 0 : 8),
             py: point.y * height + Math.cos(time / 2800 + point.phase) * (reducedMotion ? 0 : 7)
           }));
+
           context.lineWidth = 1;
           shifted.forEach((point, index) => {
-            shifted.slice(index + 1).forEach((other) => {
-              const distance = Math.hypot(point.px - other.px, point.py - other.py);
-              if (distance < Math.min(width, height) * .23) {
-                context.strokeStyle = `rgba(36,92,242,${Math.max(.045, .22 - distance / 1000)})`;
-                context.beginPath();
-                context.moveTo(point.px, point.py);
-                context.lineTo(other.px, other.py);
-                context.stroke();
-              }
+            const next = shifted[index + 1];
+            if (!next) return;
+            const segmentProgress = Math.max(0, Math.min(1, intro * (shifted.length - 1) - index));
+            const targetX = point.px + (next.px - point.px) * segmentProgress;
+            const targetY = point.py + (next.py - point.py) * segmentProgress;
+            context.strokeStyle = point.isActive || next.isActive ? "rgba(36,92,242,.38)" : "rgba(36,92,242,.13)";
+            context.lineWidth = point.isActive || next.isActive ? 1.6 : 1;
+            context.beginPath();
+            context.moveTo(point.px, point.py);
+            context.lineTo(targetX, targetY);
+            context.stroke();
+          });
+
+          shifted.forEach((point, index) => {
+            shifted.slice(index + 2, index + 6).forEach((other) => {
+              if (!(point.isActive || other.isActive)) return;
+              context.strokeStyle = "rgba(36,92,242,.07)";
+              context.lineWidth = 1;
+              context.beginPath();
+              context.moveTo(point.px, point.py);
+              context.lineTo(other.px, other.py);
+              context.stroke();
             });
           });
+
           shifted.forEach((point, index) => {
-            context.fillStyle = index % 5 === 0 ? "#092435" : "#245cf2";
+            const reveal = reducedMotion ? 1 : Math.max(0, Math.min(1, intro * shifted.length - index + .2));
+            if (!reveal) return;
+            const pulse = point.isActive ? 1 + breathe * .55 : 1;
+            context.globalAlpha = .28 + reveal * .72;
+            context.fillStyle = point.isActive ? "#245cf2" : (/^\d{4}$/.test(point.label) ? "#092435" : "#7f93aa");
             context.beginPath();
-            context.arc(point.px, point.py, point.radius, 0, Math.PI * 2);
+            context.arc(point.px, point.py, point.radius * reveal * pulse, 0, Math.PI * 2);
             context.fill();
-            if (index < 9) {
-              context.fillStyle = "rgba(9,36,53,.72)";
+
+            if (point.isActive || /^\d{4}$/.test(point.label)) {
+              context.globalAlpha = Math.min(1, reveal);
+              context.fillStyle = point.isActive ? "rgba(9,36,53,.86)" : "rgba(9,36,53,.62)";
               context.font = "10px ui-monospace, SFMono-Regular, Menlo, monospace";
               context.fillText(point.label.toUpperCase(), point.px + 8, point.py - 7);
             }
           });
+          context.globalAlpha = 1;
         };
 
         const animate = (time) => { draw(time); requestAnimationFrame(animate); };
         resize();
         window.addEventListener("resize", () => { resize(); draw(0); }, { passive: true });
+        statButtons.forEach((button) => {
+          button.addEventListener("pointerenter", () => setActiveSignal(button.dataset.signal));
+          button.addEventListener("focus", () => setActiveSignal(button.dataset.signal));
+          button.addEventListener("click", () => setActiveSignal(button.dataset.signal));
+        });
         if (reducedMotion) draw(0); else requestAnimationFrame(animate);
       }
 
@@ -693,7 +767,44 @@
         });
       }
 
-      setupTopicLattice(); renderDomainMix(); renderTopicBars(); setupRoutes(); renderSponsors(); renderSpeakers(); setupExplorer(); setupDownload();
+      function setupHeroCounters() {
+        const counters = Array.from(document.querySelectorAll("[data-count-to]"));
+        if (!counters.length) return;
+        const reducedMotion = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const format = (value, suffix) => suffix === ".0pp" ? `+${value.toFixed(1)}pp` : Math.round(value).toLocaleString("en-AU");
+        const reveal = (element) => {
+          const target = Number(element.dataset.countTo || 0);
+          const suffix = element.dataset.suffix || "";
+          if (reducedMotion) {
+            element.textContent = format(target, suffix);
+            return;
+          }
+          const start = performance.now();
+          const duration = 1200 + Math.min(target, 300) * 2.2;
+          const tick = (now) => {
+            const progress = Math.min(1, (now - start) / duration);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            element.textContent = format(target * eased, suffix);
+            if (progress < 1) requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+        };
+
+        if (!("IntersectionObserver" in window)) {
+          counters.forEach(reveal);
+          return;
+        }
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            reveal(entry.target);
+            observer.unobserve(entry.target);
+          });
+        }, { threshold: .45 });
+        counters.forEach((counter) => observer.observe(counter));
+      }
+
+      setupTopicLattice(); setupHeroCounters(); renderDomainMix(); renderTopicBars(); setupRoutes(); renderSponsors(); renderSpeakers(); setupExplorer(); setupDownload();
     })();
   </script>
 </body>
